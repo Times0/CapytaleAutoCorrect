@@ -4,16 +4,22 @@ import os
 import time
 
 import attr
+import selenium.common.exceptions
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
+from scripts import utils
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
+                    datefmt='%d-%b-%y %H:%M:%S',
                     filename='logs.log', filemode='w')
 
 logger = logging.getLogger(__name__)
+
+# exclude selenium logs
+logging.getLogger('selenium').setLevel(logging.WARNING)
 
 
 @attr.s
@@ -26,23 +32,21 @@ user = User(username="magali.andry-chevalerias", password="Ecedouced#42T")
 
 
 class StudentFileDownloader:
-    def __init__(self):
-        self.options = self._setup_browser_options()
+    def __init__(self, dl_path=None, copies_path=None):
         self.driver = None
 
-    @staticmethod
-    def _setup_browser_options():
-        options = Options()
-        # If you want headless mode, uncomment the next line
-        # options.add_argument('-headless')
+        self.dl_path = dl_path
+        self.copies_path = copies_path
+        self.options = self._setup_browser_options()
 
-        # Set preferences directly on the options object
+    def _setup_browser_options(self):
+        options = Options()
+        options.add_argument('-headless')
+
         options.set_preference("browser.download.folderList", 2)
         options.set_preference("browser.download.manager.showWhenStarting", False)
         options.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain")
-        download_path = os.path.join(os.getcwd(), "copies")
-        options.set_preference("browser.download.dir", download_path)
-
+        options.set_preference("browser.download.dir", self.dl_path)
         return options
 
     def auth(self, identifiant, password):
@@ -59,78 +63,74 @@ class StudentFileDownloader:
         self.driver.get("https://capytale2.ac-paris.fr/web/my")
         print("Successfully logged in.")
 
-    def dl_every_student_file(self, assignment_link, max_students=100, progress_signal=None):
+    def dl_every_student_file(self, assignment_link, progress_signal=None) -> None:
         self.driver.get(assignment_link)
-        input("Press enter to continue...")
-        chosen_file_path = ""
+        time.sleep(0.5)
+        self.dl_csv()
+        time.sleep(0.5)
+        names: list[str] = utils.extract_names_from_csv(f"{self.dl_path}/CAPYTALE.csv")
+        logger.info(f"Found {len(names)} students")
+        logger.debug(names)
+        logger.info("Downloading files...")
 
-        for i in range(2, max_students):
-            time.sleep(0.5)
+        for name in names:
             if progress_signal:
-                progress_signal.emit(int(100 * i / max_students))
+                progress_signal.emit(names.index(name))
+            if self._is_file_already_downloaded(name):
+                logger.debug(f"Skipping {name}")
+
+                continue
+            time.sleep(0.5)
+
+            copie_link = self.driver.find_element(By.LINK_TEXT, name)
             try:
-                element = self.driver.find_element(By.LINK_TEXT, "BAH Gérard")
-                self.driver.execute_script("arguments[0].scrollIntoView();", element)
-                time.sleep(1)
-                element.click()
-            except Exception as e:
-                print(e)
+                self.driver.execute_script("arguments[0].scrollIntoView();", copie_link)
+            except selenium.common.exceptions.ElementNotInteractableException:
+                logger.warning(f"Could not scroll to {name}, retrying...")
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+            time.sleep(0.5)
+            copie_link.click()
+            self.inside_basthon(name)
+
+    def inside_basthon(self, student_name):
+        self.wait_for_page_to_be_fully_loaded()
+        MAX_ATTEMPTS = 5
+        attempt_count = 0
+        while attempt_count < MAX_ATTEMPTS:
+            time.sleep(1)
+            try:
+                self.driver.find_element(By.ID, "download").click()
+                time.sleep(0.5)
+                logging.info(f"Downloaded {student_name}'s file")
+                self.rename_last_downloaded_file(student_name)
+                break
+            except selenium.common.exceptions.ElementClickInterceptedException:
+                attempt_count += 1
+                logging.warning(f"Could not download {student_name}'s file, retrying...")
                 continue
 
-            self._download_and_rename_file(chosen_file_path)
+        if attempt_count == MAX_ATTEMPTS:
+            logging.error(f"Could not download {student_name}'s file")
 
-        if progress_signal:
-            progress_signal.emit(100)
-        print("Successfully downloaded every file.")
-        self.driver.quit()
+        self.driver.find_element(By.XPATH, "//a/button/i").click()  # Retour à la liste des élèves
 
-    @staticmethod
-    def _is_file_already_downloaded(student_name):
-        return rf"copies\{student_name}.py" in glob.glob("copies/*.py")
+    def dl_csv(self):
+        if os.path.exists(self.dl_path + "/CAPYTALE.csv"):
+            os.remove(self.dl_path + "/CAPYTALE.csv")
+        self.driver.find_element(By.CSS_SELECTOR, ".dt-button > span").click()
 
-    def _get_student_name(self):
-        student_name_element = self.driver.find_element(By.ID, "capytale-student-info")
-        student_name_text = student_name_element.text
-        return self._inverse_name(student_name_text[:-7]).replace(" ", "_")
+    def _is_file_already_downloaded(self, student_name):
+        return os.path.exists(f"{self.copies_path}/{student_name}.py")
 
-    def _download_and_rename_file(self, chosen_file_path):
-        MAX_ATTEMPTS = 5  # define a max number of attempts to avoid infinite loops
-        attempts = 0
+    def rename_last_downloaded_file(self, student_name):
+        list_of_files = glob.glob(f"{self.dl_path}/*.py")
+        latest_file = max(list_of_files, key=os.path.getctime)
 
-        while attempts < MAX_ATTEMPTS:
-            try:
-                time.sleep(0.2)
-                student_name = self._get_student_name()
-                if len(student_name) < 3:
-                    attempts += 1
-                    continue
-
-                if self._is_file_already_downloaded(student_name):
-                    print(f"Skipping {student_name}")
-                    self.driver.find_element(By.XPATH, "//a/button/i").click()
-                    time.sleep(1)
-                    return
-                else:
-                    self.driver.find_element(By.ID, "download").click()
-                    time.sleep(0.5)
-                    print(f"Downloaded {student_name}'s file")
-
-                    if not chosen_file_path:
-                        list_of_files = glob.glob('copies/*.py')
-                        latest_file = max(list_of_files, key=os.path.getctime)
-                        chosen_file_path = latest_file
-
-                    os.rename(chosen_file_path, fr"copies\{student_name}.py")
-                    self.driver.find_element(By.XPATH, "//a/button/i").click()
-                    time.sleep(1)
-                    break
-
-            except NoSuchElementException:  # capture specific exception
-                attempts += 1
-
-            except Exception as e:  # it's good to know what unexpected errors occur
-                print(f"Unexpected error: {e}")
-                attempts += 1
+        # if folder does not exist, create it
+        if not os.path.exists(self.copies_path):
+            os.mkdir(self.copies_path)
+        os.rename(latest_file, f"{self.copies_path}/{student_name}.py")
+        logger.debug(f"Renamed {latest_file} to {student_name}.py")
 
     @staticmethod
     def _inverse_name(name):
@@ -142,16 +142,18 @@ class StudentFileDownloader:
     def run(self, assignment_link):
         # MODIFY HERE: username, password
         self.auth(user.username, user.password)
-        self.dl_every_student_file(assignment_link, max_students=100)
+        self.dl_every_student_file(assignment_link)
 
     def __del__(self):
-        # Destructor to close the browser instance
         if self.driver:
             self.driver.quit()
+
+    def wait_for_page_to_be_fully_loaded(self):
+        time.sleep(3)
 
 
 if __name__ == '__main__':
     downloader = StudentFileDownloader()
     downloader.auth(user.username, user.password)
-    downloader.dl_every_student_file("https://capytale2.ac-paris.fr/web/assignments/1608018")
+    downloader.dl_every_student_file("https://capytale2.ac-paris.fr/web/assignments/216298")
     input("Press enter to continue...")

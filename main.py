@@ -1,5 +1,4 @@
 import sys
-import time
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
@@ -10,8 +9,12 @@ from views.Ui_window1 import Ui_MainWindow as Window1Ui
 from views.Ui_window2 import Ui_MainWindow as Window2Ui
 
 user = User(username="magali.andry-chevalerias", password="Ecedouced#42T")
+import os
 
-downloader = StudentFileDownloader()
+cwd = os.path.dirname(os.path.realpath(__file__))
+
+downloader = StudentFileDownloader(dl_path=os.path.join(cwd, "scripts", "downloads"),
+                                   copies_path=os.path.join(cwd, "scripts", "copies"))
 
 
 class AuthWorker(QThread):
@@ -27,10 +30,7 @@ class DownloadWorker(QThread):
         self.link = link
 
     def run(self):
-        # downloader.dl_every_student_file(self.link, max_students=100, progress_signal=self.progress_signal)
-        for i in range(100):
-            self.progress_signal.emit(i)
-            time.sleep(0.3)
+        downloader.dl_every_student_file(self.link, self.progress_signal)
 
 
 class MainWindow(QMainWindow):

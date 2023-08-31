@@ -188,8 +188,6 @@ if __name__ == '__main__':
     correcter = EvilCorrecter(files_paths=files,
                               modele_functions=get_functions_from_file(
                                   os.path.join(cwd, "..", "tests", "correction.py")))
-    correcter.test_student('Jean Jacques')
-    correcter.test_student('Mich Mich')
 
     from pprint import pprint
 
