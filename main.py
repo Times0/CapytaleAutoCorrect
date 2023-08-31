@@ -9,7 +9,7 @@ from scripts.browser import StudentFileDownloader, User
 from views.Ui_window1 import Ui_MainWindow as Window1Ui
 from views.Ui_window2 import Ui_MainWindow as Window2Ui
 
-user = User(username="magali.andry-chevalerias", password="Ecedouced#42t")
+user = User(username="magali.andry-chevalerias", password="Ecedouced#42T")
 
 downloader = StudentFileDownloader()
 

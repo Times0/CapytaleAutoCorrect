@@ -22,7 +22,7 @@ class User:
     password: str = attr.ib(default=None)
 
 
-user = User(username="magali.andry-chevalerias", password="Ecedouced#42t")
+user = User(username="magali.andry-chevalerias", password="Ecedouced#42T")
 
 
 class StudentFileDownloader:
@@ -34,7 +34,7 @@ class StudentFileDownloader:
     def _setup_browser_options():
         options = Options()
         # If you want headless mode, uncomment the next line
-        options.add_argument('-headless')
+        # options.add_argument('-headless')
 
         # Set preferences directly on the options object
         options.set_preference("browser.download.folderList", 2)
@@ -46,30 +46,30 @@ class StudentFileDownloader:
         return options
 
     def auth(self, identifiant, password):
-
-
         self.driver = webdriver.Firefox(options=self.options)
         self.driver.get("https://ent.iledefrance.fr/auth/login")
-        time.sleep(2)
-        return
-        assert self.driver.current_url == "https://ent.iledefrance.fr/auth/login"
+        time.sleep(1)
         self.driver.find_element(By.ID, "email").send_keys(identifiant)
         self.driver.find_element(By.ID, "password").send_keys(password)
         self.driver.find_element(By.ID, "password").send_keys(Keys.ENTER)
+        # Wait for the page to load
         time.sleep(2)
-        print("Authentication success")
+        assert self.driver.current_url == "https://ent.iledefrance.fr/timeline/timeline"
         self.driver.get("https://capytale2.ac-paris.fr/web/c-auth/pvd/mln/connect")
-        time.sleep(2)
+        self.driver.get("https://capytale2.ac-paris.fr/web/my")
+        print("Successfully logged in.")
 
     def dl_every_student_file(self, assignment_link, max_students=100, progress_signal=None):
         self.driver.get(assignment_link)
+        input("Press enter to continue...")
         chosen_file_path = ""
 
         for i in range(2, max_students):
+            time.sleep(0.5)
             if progress_signal:
                 progress_signal.emit(int(100 * i / max_students))
             try:
-                element = self.driver.find_element(By.XPATH, f"//tr[{i}]/td[4]/a")
+                element = self.driver.find_element(By.LINK_TEXT, "BAH Gérard")
                 self.driver.execute_script("arguments[0].scrollIntoView();", element)
                 time.sleep(1)
                 element.click()
@@ -152,6 +152,6 @@ class StudentFileDownloader:
 
 if __name__ == '__main__':
     downloader = StudentFileDownloader()
-    # MODIFY HERE: assignment link, number of students
-    downloader.run(
-        "https://capytale2.ac-paris.fr/web/c-auth/pvd/mln/assignment/5f8c3c8d1c4f6e0001f8d2e5/5f8c3c8d1c4f6e0001f8d2e6")
+    downloader.auth(user.username, user.password)
+    downloader.dl_every_student_file("https://capytale2.ac-paris.fr/web/assignments/1608018")
+    input("Press enter to continue...")
