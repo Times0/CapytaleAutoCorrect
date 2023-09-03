@@ -1,193 +1,135 @@
-from PyQt5.QtCore import QRegExp
-from PyQt5.QtGui import QColor, QTextCharFormat, QFont, QSyntaxHighlighter
+import importlib
+import logging
+import os
+from importlib.machinery import SourceFileLoader
+from typing import Callable
+
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtWidgets import QVBoxLayout
+from qfluentwidgets import PushButton, TitleLabel, InfoBar, InfoBarPosition, ProgressBar
+
+logger = logging.getLogger(__name__)
 
 
-def format(color, style=''):
-    """
-    Return a QTextCharFormat with the given attributes.
-    """
-    _color = QColor()
-    if type(color) is not str:
-        _color.setRgb(color[0], color[1], color[2])
-    else:
-        _color.setNamedColor(color)
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        self.parent = MainWindow
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(800, 592)
 
-    _format = QTextCharFormat()
-    _format.setForeground(_color)
-    if 'bold' in style:
-        _format.setFontWeight(QFont.Bold)
-    if 'italic' in style:
-        _format.setFontItalic(True)
+        centralWidget = QtWidgets.QWidget(MainWindow)
+        MainWindow.setCentralWidget(centralWidget)
 
-    return _format
+        layout = QVBoxLayout(centralWidget)
 
+        # Add a label to display the instruction
+        self.instructionLabel = TitleLabel("Please select the Python file (.py) for test correction:")
+        layout.addWidget(self.instructionLabel)
 
-# Syntax styles that can be shared by all languages
+        # Add a button to open file dialog
+        self.openFileButton = PushButton("Select File")
+        self.openFileButton.clicked.connect(self.open_file_dialog)
+        layout.addWidget(self.openFileButton)
 
-STYLES = {
-    'keyword': format([200, 120, 50], 'bold'),
-    'operator': format([150, 150, 150]),
-    'brace': format('darkGray'),
-    'defclass': format([220, 220, 255], 'bold'),
-    'string': format([20, 110, 100]),
-    'string2': format([30, 120, 110]),
-    'comment': format([128, 128, 128]),
-    'self': format([150, 85, 140], 'italic'),
-    'numbers': format([100, 150, 190]),
-}
+        # Removed the label that displays the selected file
 
+        # Add a button to initiate the correction, but hide it initially
+        self.correctNowButton = PushButton("Correct now")
+        self.correctNowButton.setFixedSize(200, 60)  # Make the button bigger
+        self.correctNowButton.hide()
+        layout.addWidget(self.correctNowButton)
 
-class PythonHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for the Python language.
-    """
-    # Python keywords
+        # Add a loading bar to display the progress
+        self.progressBar = ProgressBar()
+        self.progressBar.hide()
+        layout.addWidget(self.progressBar)
 
-    keywords = [
-        'and', 'assert', 'break', 'class', 'continue', 'def',
-        'del', 'elif', 'else', 'except', 'exec', 'finally',
-        'for', 'from', 'global', 'if', 'import', 'in',
-        'is', 'lambda', 'not', 'or', 'pass', 'print',
-        'raise', 'return', 'try', 'while', 'yield',
-        'None', 'True', 'False',
-    ]
+        self.correction_path = None
+        # Fill remaining space
 
-    # Python operators
-    operators = [
-        '=',
-        # Comparison
-        '==', '!=', '<', '<=', '>', '>=',
-        # Arithmetic
-        '\+', '-', '\*', '/', '//', '\%', '\*\*',
-        # In-place
-        '\+=', '-=', '\*=', '/=', '\%=',
-        # Bitwise
-        '\^', '\|', '\&', '\~', '>>', '<<',
-    ]
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "Test Correction File Selector"))
 
-    # Python braces
-    braces = [
-        '\{', '\}', '\(', '\)', '\[', '\]',
-    ]
+    def update_progress_bar(self, value: int):
+        print(value)
+        self.progressBar.setValue(value)
 
-    def __init__(self, document):
-        QSyntaxHighlighter.__init__(self, document)
+    def open_file_dialog(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.ReadOnly
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+            None,
+            "Select Python File",
+            "",
+            "Python Files (*.py);;All Files (*)",
+            options=options
+        )
 
-        # Multi-line strings (expression, flag, style)
-        # FIXME: The triple-quotes in these two lines will mess up the
-        # syntax highlighting from this point onward
-        self.tri_single = (QRegExp("'''"), 1, STYLES['string2'])
-        self.tri_double = (QRegExp('"""'), 2, STYLES['string2'])
+        if filename:
+            logger.info(f"Selected file: {filename}")
+            # No longer displaying the selected file name
+            self.check_file(filename)
 
-        rules = []
+    def check_file(self, filename) -> None:
+        # Placeholder function for the actual file checking logic
+        logger.info("Checking file...")
+        # retrieve the "tests" dict from the modele file
+        name = os.path.basename(filename)
+        correction = SourceFileLoader(name, filename).load_module()
+        try:
+            tests = correction.tests
+        except AttributeError:
+            logger.debug(f"Tests not found in {filename}, please add a 'tests' dict")
+            InfoBar.error(
+                title='Selected file is not valid',
+                content=f"Tests not found in {filename}, please add a 'tests' dict",
+                position=InfoBarPosition.BOTTOM,
+                parent=self.parent,
+                duration=5000
+            )
+            return
 
-        # Keyword, operator, and brace rules
-        rules += [(r'\b%s\b' % w, 0, STYLES['keyword'])
-                  for w in PythonHighlighter.keywords]
-        rules += [(r'%s' % o, 0, STYLES['operator'])
-                  for o in PythonHighlighter.operators]
-        rules += [(r'%s' % b, 0, STYLES['brace'])
-                  for b in PythonHighlighter.braces]
+        # Verify that the file contains the required functions
+        functions = get_functions_from_file(filename)
+        for function_name in tests:
+            if function_name not in functions:
+                logger.debug(f"Function {function_name} not found in {filename}, please add it")
+                InfoBar.error(
+                    title='Selected file is not valid',
+                    content=f"Function {function_name} not found in {filename}, please add it",
+                    position=InfoBarPosition.BOTTOM,
+                    parent=self.parent,
+                    duration=5000
+                )
+                return
 
-        # All other rules
-        rules += [
-            # 'self'
-            (r'\bself\b', 0, STYLES['self']),
-
-            # Double-quoted string, possibly containing escape sequences
-            (r'"[^"\\]*(\\.[^"\\]*)*"', 0, STYLES['string']),
-            # Single-quoted string, possibly containing escape sequences
-            (r"'[^'\\]*(\\.[^'\\]*)*'", 0, STYLES['string']),
-
-            # 'def' followed by an identifier
-            (r'\bdef\b\s*(\w+)', 1, STYLES['defclass']),
-            # 'class' followed by an identifier
-            (r'\bclass\b\s*(\w+)', 1, STYLES['defclass']),
-
-            # From '#' until a newline
-            (r'#[^\n]*', 0, STYLES['comment']),
-
-            # Numeric literals
-            (r'\b[+-]?[0-9]+[lL]?\b', 0, STYLES['numbers']),
-            (r'\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b', 0, STYLES['numbers']),
-            (r'\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b', 0, STYLES['numbers']),
-        ]
-
-        # Build a QRegExp for each pattern
-        self.rules = [(QRegExp(pat), index, fmt)
-                      for (pat, index, fmt) in rules]
-
-    def highlightBlock(self, text):
-        """Apply syntax highlighting to the given block of text.
-        """
-        # Do other syntax formatting
-        for expression, nth, format in self.rules:
-            index = expression.indexIn(text, 0)
-
-            while index >= 0:
-                # We actually want the index of the nth match
-                index = expression.pos(nth)
-                length = len(expression.cap(nth))
-                self.setFormat(index, length, format)
-                index = expression.indexIn(text, index + length)
-
-        self.setCurrentBlockState(0)
-
-        # Do multi-line strings
-        in_multiline = self.match_multiline(text, *self.tri_single)
-        if not in_multiline:
-            in_multiline = self.match_multiline(text, *self.tri_double)
-
-    def match_multiline(self, text, delimiter, in_state, style):
-        """Do highlighting of multi-line strings. ``delimiter`` should be a
-        ``QRegExp`` for triple-single-quotes or triple-double-quotes, and
-        ``in_state`` should be a unique integer to represent the corresponding
-        state changes when inside those strings. Returns True if we're still
-        inside a multi-line string when this function is finished.
-        """
-        # If inside triple-single quotes, start at 0
-        if self.previousBlockState() == in_state:
-            start = 0
-            add = 0
-        # Otherwise, look for the delimiter on this line
-        else:
-            start = delimiter.indexIn(text)
-            # Move past this match
-            add = delimiter.matchedLength()
-
-        # As long as there's a delimiter match on this line...
-        while start >= 0:
-            # Look for the ending delimiter
-            end = delimiter.indexIn(text, start + add)
-            # Ending delimiter on this line?
-            if end >= add:
-                length = end - start + add + delimiter.matchedLength()
-                self.setCurrentBlockState(0)
-            # No; multi-line string
-            else:
-                self.setCurrentBlockState(in_state)
-                length = len(text) - start + add
-            # Apply formatting
-            self.setFormat(start, length, style)
-            # Look for the next match
-            start = delimiter.indexIn(text, start + length)
-
-        # Return True if still inside a multi-line string, False otherwise
-        if self.currentBlockState() == in_state:
-            return True
-        else:
-            return False
+        InfoBar.success(
+            title="The correction file is valid 🔥",
+            content="The selected file is valid, you can now start the test correction",
+            position=InfoBarPosition.BOTTOM,
+            parent=self.parent,
+            duration=5000
+        )
+        self.correction_path = filename
+        self.correctNowButton.show()
+        self.progressBar.show()
 
 
-from PyQt5.QtWidgets import QApplication, QTextEdit
+def get_functions_from_file(file: str) -> dict[str, Callable]:
+    spec = importlib.util.spec_from_file_location("module.name", file)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return {name: function for name, function in module.__dict__.items() if callable(function)}
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import sys
 
-    app = QApplication(sys.argv)
-
-    editor = QTextEdit()
-    highlight = PythonHighlighter(editor.document())
-
-    editor.show()
-
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    ui.retranslateUi(MainWindow)
+    MainWindow.show()
     sys.exit(app.exec_())

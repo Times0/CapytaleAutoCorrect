@@ -12,9 +12,6 @@ from selenium.webdriver.firefox.options import Options
 
 from scripts import utils
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S',
-                    filename='logs.log', filemode='w')
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +29,11 @@ user = User(username="magali.andry-chevalerias", password="Ecedouced#42T")
 
 
 class StudentFileDownloader:
-    def __init__(self, dl_path=None, copies_path=None):
+    def __init__(self, dl_path=None):
         self.driver = None
 
         self.dl_path = dl_path
-        self.copies_path = copies_path
+        self.copies_path = None
         self.options = self._setup_browser_options()
 
     def _setup_browser_options(self):
@@ -63,7 +60,8 @@ class StudentFileDownloader:
         self.driver.get("https://capytale2.ac-paris.fr/web/my")
         print("Successfully logged in.")
 
-    def dl_every_student_file(self, assignment_link, progress_signal=None) -> None:
+    def dl_every_student_file(self, assignment_link, copies_path, progress_signal=None) -> None:
+        self.copies_path = copies_path
         self.driver.get(assignment_link)
         time.sleep(0.5)
         self.dl_csv()
@@ -138,11 +136,6 @@ class StudentFileDownloader:
             if name[i] == " ":
                 return name[i + 1:] + " " + name[:i]
         return name
-
-    def run(self, assignment_link):
-        # MODIFY HERE: username, password
-        self.auth(user.username, user.password)
-        self.dl_every_student_file(assignment_link)
 
     def __del__(self):
         if self.driver:
