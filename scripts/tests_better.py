@@ -9,7 +9,6 @@ from typing import Callable
 
 import multiprocess
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -67,9 +66,10 @@ class EvilCorrecter:
     def correct_student(self, student_name: str) -> None:
         logger.debug(f"Testing student {student_name}")
         file = self.file_path[student_name]
-        self.detailed_results[student_name] = {}
+        self.detailed_results[student_name] = {f_name: {} for f_name in self.funtions_names_to_test}
+        if self.test_for_inputs(file, student_name):
+            return
         for function_name in self.funtions_names_to_test:
-            self.detailed_results[student_name][function_name] = {}
             try:
                 function = load_function(file, function_name)
             except AttributeError:
@@ -90,7 +90,7 @@ class EvilCorrecter:
         for test_name, test in tests.items():
             logger.debug(f"Testing {test_name} with {test}")
             try:
-                result = run_with_timeout(function, *test)
+                result = run_without_timeout(function, *test)
 
             except TimeoutError:
                 self.detailed_results[student_name][function.__name__][test_name] = Result.TIMEOUT
@@ -139,6 +139,18 @@ class EvilCorrecter:
 
         workbook.close()
 
+    def test_for_inputs(self, file, student_name):
+        """Test if the files contains the keyword input and raise an error if it does"""
+        with open(file, 'r') as f:
+            content = f.read()
+            if "input" in content:
+                logger.debug(f"Found input in {file}, please remove it")
+                for function_name in self.funtions_names_to_test:
+                    for test_name in self.expected_outputs[function_name]:
+                        self.detailed_results[student_name][function_name][test_name] = Result.INPUT_FOUND
+                return True
+        return False
+
 
 def timeout(func, timeout_sec, *args, **kwargs):
     with multiprocess.Pool(processes=1) as pool:
@@ -153,6 +165,10 @@ def run_with_timeout(func, *args, **kwargs):
     return timeout(func, 2, *args, **kwargs)
 
 
+def run_without_timeout(func, *args, **kwargs):
+    return func(*args, **kwargs)
+
+
 def extract_name(path: str) -> str:
     return path.split('\\')[-1].split('.')[0]
 
@@ -164,13 +180,17 @@ class Result(Enum):
     TIMEOUT = auto()
     INEXSISTANT = auto()
     SYNTAX_ERROR = auto()
+    INPUT_FOUND = auto()
 
 
 def load_function(file: str, function_name: str) -> Callable:
     spec = importlib.util.spec_from_file_location(function_name, file)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return getattr(module, function_name)
+    f = getattr(module, function_name)
+    if not isinstance(f, type(lambda: None)):
+        raise AttributeError
+    return f
 
 
 def get_functions_from_file(file: str) -> dict[str, Callable]:
@@ -182,8 +202,8 @@ def get_functions_from_file(file: str) -> dict[str, Callable]:
 
 if __name__ == '__main__':
     logger.info("Starting tests")
-    copies_path = rf"../copies/972903"
-    correction_file = os.path.join(os.getcwd(), "../tests", "correction.py")
+    copies_path = rf"../copies/1911196"
+    correction_file = os.path.join(os.getcwd(), "../correction_1.py")
 
     copies = glob.glob(f"{copies_path}/*.py")
 

@@ -56,6 +56,10 @@ class CorrectWorker(QThread):
         correcter = EvilCorrecter(self.copies_paths, self.correction_file)
         correcter.correct_all(progress_signal=self.progress_signal)
         correcter.generate_xlsx(self.output_path)
+        self.progress_signal.emit(100)
+
+        # open the explorer on the output folder
+        os.startfile(os.path.join(cwd, "output"))
 
 
 class MainWindow(QMainWindow):
