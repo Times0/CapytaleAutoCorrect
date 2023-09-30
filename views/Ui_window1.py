@@ -11,6 +11,7 @@
 from PyQt5 import QtCore, QtWidgets
 from qfluentwidgets import Theme, setTheme
 
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -121,9 +122,8 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.TitleLabel.setText(_translate("MainWindow", "Choix de l\'activité"))
         self.SubtitleLabel.setText(_translate("MainWindow", "...Ou entrer le lien direct"))
-        self.LineEdit.setPlaceholderText(_translate("MainWindow", "https://capytale-ac.fr/activity?a=12345"))
-
-
+        self.LineEdit.setPlaceholderText(
+            _translate("MainWindow", "https://capytale2.ac-paris.fr/web/assignments/1911196"))
 
 
 from qfluentwidgets import CardWidget, PlainTextEdit, SubtitleLabel, TitleLabel, ToolButton, LineEdit

@@ -8,6 +8,7 @@ from pprint import pprint
 from typing import Callable
 
 import multiprocess
+import xlsxwriter
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +23,8 @@ class EvilCorrecter:
         logger.debug(f"Students names: {self.student_names}")
 
         self.correction_file: str = correction_path
-        self.modele_functions: dict[str, Callable] = get_functions_from_file(self.correction_file)
-        self.funtions_names_to_test: list[str] = list(self.modele_functions.keys())
+        self.model_functions: dict[str, Callable] = get_functions_from_file(self.correction_file)
+        self.funtions_names_to_test: list[str] = list(self.model_functions.keys())
 
         self.test_values: dict[str, dict[str:tuple]] = {}  # {function_name: {test_name: test_values}}
         self.expected_outputs: dict[str, dict[str, any]] = {}  # {function_name: {test_name: expected_output}}
@@ -37,7 +38,7 @@ class EvilCorrecter:
             str, dict[str, dict[str, Result]]] = {}  # {student_name: {function_name: {test_name: result}}}
 
     def check_parameters(self):
-        assert self.modele_functions is not None, "Please provide modele_functions"
+        assert self.model_functions is not None, "Please provide model_functions"
         assert self.funtions_names_to_test is not None, "Please provide funtions_names_to_test"
 
     def generate_tests(self):
@@ -54,14 +55,20 @@ class EvilCorrecter:
             logger.debug(f"Tests not found in {self.correction_file}, please add a 'tests' dict")
             return
 
-        self.test_values = tests
+        for f_name in tests.keys():
+            self.test_values[f_name] = {}
+            for i, test in enumerate(tests[f_name]):
+                self.test_values[f_name][f"test {i}"] = test
 
     def generate_expected_outputs(self):
         for function_name in self.funtions_names_to_test:
             self.expected_outputs[function_name] = {}
             for test_name in self.test_values[function_name]:
-                self.expected_outputs[function_name][test_name] = self.modele_functions[function_name] \
-                    (*self.test_values[function_name][test_name])
+                args = self.test_values[function_name][test_name]
+                if isinstance(args, tuple):
+                    self.expected_outputs[function_name][test_name] = self.model_functions[function_name](*args)
+                else:
+                    self.expected_outputs[function_name][test_name] = self.model_functions[function_name](args)
 
     def correct_student(self, student_name: str) -> None:
         logger.debug(f"Testing student {student_name}")
@@ -90,8 +97,10 @@ class EvilCorrecter:
         for test_name, test in tests.items():
             logger.debug(f"Testing {test_name} with {test}")
             try:
-                result = run_without_timeout(function, *test)
-
+                if isinstance(test, tuple):
+                    result = run_without_timeout(function, *test)
+                else:
+                    result = run_without_timeout(function, test)
             except TimeoutError:
                 self.detailed_results[student_name][function.__name__][test_name] = Result.TIMEOUT
                 logger.info(f"Timeout while testing {function.__name__} with {test}, result -> TIMEOUT")
@@ -119,23 +128,42 @@ class EvilCorrecter:
 
     def generate_xlsx(self, path):
         print("Generating xlsx")
-        import xlsxwriter
         workbook = xlsxwriter.Workbook(path)
         worksheet = workbook.add_worksheet()
 
-        # Start from the first cell. Rows and columns are zero indexed.
+        # Create a format for cell coloring
+        pass_format = workbook.add_format({'bg_color': '#C6EFCE', 'bold': True})
+        fail_format = workbook.add_format({'bg_color': '#FFC7CE', 'bold': True})
+
+        # Start from the first cell. Rows and columns are zero-indexed.
         row = 0
         col = 0
 
         # Iterate over the data and write it out row by row.
         for student_name, functions in self.detailed_results.items():
             worksheet.write(row, col, student_name)
+            row += 1
+
             for function_name, tests in functions.items():
                 worksheet.write(row, col + 1, function_name)
+                row += 1
+
                 for test_name, result in tests.items():
                     worksheet.write(row, col + 2, test_name)
                     worksheet.write(row, col + 3, result.name)
+
+                    passed = result == Result.OK
+
+                    # Check if the test passed and apply the corresponding cell color
+                    if passed:
+                        worksheet.set_row(row, cell_format=pass_format)
+                    else:
+                        worksheet.set_row(row, cell_format=fail_format)
+
                     row += 1
+
+            # Add a separator (blank row) between students
+            row += 1
 
         workbook.close()
 
@@ -174,13 +202,13 @@ def extract_name(path: str) -> str:
 
 
 class Result(Enum):
-    OK = auto()
-    WRONG = auto()
-    ERROR = auto()
-    TIMEOUT = auto()
-    INEXSISTANT = auto()
-    SYNTAX_ERROR = auto()
-    INPUT_FOUND = auto()
+    OK = "OK"
+    WRONG = "Wrong output"
+    ERROR = "Error"
+    TIMEOUT = "Timeout"
+    INEXSISTANT = "Inexistant"
+    SYNTAX_ERROR = "Syntax error"
+    INPUT_FOUND = "'Input' found in file"
 
 
 def load_function(file: str, function_name: str) -> Callable:
@@ -188,7 +216,7 @@ def load_function(file: str, function_name: str) -> Callable:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     f = getattr(module, function_name)
-    if not isinstance(f, type(lambda: None)):
+    if not isinstance(f, Callable):
         raise AttributeError
     return f
 
@@ -210,5 +238,3 @@ if __name__ == '__main__':
     correcter = EvilCorrecter(files_paths=copies, correction_path=correction_file)
 
     correcter.correct_all()
-
-    pprint(correcter.detailed_results)

@@ -114,7 +114,8 @@ class MainWindow(QMainWindow):
 
     def start_download_worker(self):
         link = self.window1_ui.LineEdit.text()
-        self.copies_path = os.path.join(cwd, "copies", link.split("/")[-1])
+        self.assignment_code = link.split("/")[-1]
+        self.copies_path = os.path.join(cwd, "copies", self.assignment_code)
         self.download_worker = DownloadWorker(link, copies_path=self.copies_path)
         logger.info(f"Copies path: {self.copies_path}")
         self.download_worker.start(priority=QThread.NormalPriority)
@@ -123,7 +124,7 @@ class MainWindow(QMainWindow):
     def start_correct_worker(self):
         self.correct_worker = CorrectWorker(
             copies_paths=glob.glob(os.path.join(cwd, self.copies_path, "*.py")),
-            output_path="output/corrected.xlsx",
+            output_path=f"output/corrected_{self.assignment_code}.xlsx",
             correction_file=self.window3_ui.correction_path
         )
         self.correct_worker.start(priority=QThread.HighestPriority)

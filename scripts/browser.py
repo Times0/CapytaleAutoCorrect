@@ -12,7 +12,6 @@ from selenium.webdriver.firefox.options import Options
 
 from scripts import utils
 
-
 logger = logging.getLogger(__name__)
 
 # exclude selenium logs
@@ -49,7 +48,7 @@ class StudentFileDownloader:
     def auth(self, identifiant, password):
         self.driver = webdriver.Firefox(options=self.options)
         self.driver.get("https://ent.iledefrance.fr/auth/login")
-        time.sleep(1)
+        time.sleep(2)
         self.driver.find_element(By.ID, "email").send_keys(identifiant)
         self.driver.find_element(By.ID, "password").send_keys(password)
         self.driver.find_element(By.ID, "password").send_keys(Keys.ENTER)

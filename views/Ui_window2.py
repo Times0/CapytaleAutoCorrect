@@ -2,6 +2,7 @@
 import glob
 import logging
 import os
+from datetime import datetime
 
 from PyQt5 import QtCore, QtWidgets
 
@@ -99,7 +100,10 @@ class Ui_MainWindow(object):
         for file in files:
             self.TableView.insertRow(0)
             self.TableView.setItem(0, 0, QtWidgets.QTableWidgetItem(file.split(".")[0]))
-            self.TableView.setItem(0, 1, QtWidgets.QTableWidgetItem(str(os.path.getmtime(os.path.join(path, file)))))
+            timestamp = os.path.getmtime(os.path.join(path, file))
+            datetime_obj = datetime.fromtimestamp(timestamp)
+            hour_minute_string = datetime_obj.strftime('%H:%M')
+            self.TableView.setItem(0, 1, QtWidgets.QTableWidgetItem(hour_minute_string))
             self.TableView.setItem(0, 2, QtWidgets.QTableWidgetItem(file))
 
         # Resize the columns to fit the content
