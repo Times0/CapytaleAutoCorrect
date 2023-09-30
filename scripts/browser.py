@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import time
+import dotenv
 
 import attr
 import selenium.common.exceptions
@@ -24,8 +25,10 @@ class User:
     password: str = attr.ib(default=None)
 
 
-user = User(username="magali.andry-chevalerias", password="Ecedouced#42T")
 
+dotenv.load_dotenv()
+user = User(username=os.getenv("ENT_USERNAME"), password=os.getenv("ENT_PASSWORD"))
+print(user)
 
 class StudentFileDownloader:
     def __init__(self, dl_path=None):
