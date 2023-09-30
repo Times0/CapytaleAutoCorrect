@@ -9,7 +9,6 @@
 
 
 from PyQt5 import QtCore, QtWidgets
-from qfluentwidgets import Theme, setTheme
 
 
 class Ui_MainWindow(object):
@@ -126,5 +125,5 @@ class Ui_MainWindow(object):
             _translate("MainWindow", "https://capytale2.ac-paris.fr/web/assignments/1911196"))
 
 
-from qfluentwidgets import CardWidget, PlainTextEdit, SubtitleLabel, TitleLabel, ToolButton, LineEdit
+from qfluentwidgets import CardWidget, SubtitleLabel, TitleLabel, ToolButton, LineEdit
 from qfluentwidgets import FluentIcon
