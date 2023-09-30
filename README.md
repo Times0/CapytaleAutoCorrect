@@ -7,7 +7,9 @@ Ce fichier installe les dépendances et lance le programme.
 
 ## Fichier de correction
 
-Le fichier de correction contient les fonctions à tester et les arguments à tester pour chaque fonction.
+Après avoir téléchargé tous les fichiers à corriger, le programme demandera le fichier de correction.
+
+Le fichier de correction doit contenir les fonctions à tester et les arguments à tester pour chaque fonction.
 Ils doivent être placés dans un dictionnaire nommé `tests` et les arguments doivent être placés dans une liste.
 
 ```python
