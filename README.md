@@ -1,7 +1,15 @@
 # CapytaleAutoCorrect
+
+## Lancement
+
+Lancer le programme `start.bat` pour lancer le programme.
+Ce fichier installe les dépendances et lance le programme.
+
 ## Fichier de correction
+
 Le fichier de correction contient les fonctions à tester et les arguments à tester pour chaque fonction.
 Ils doivent être placés dans un dictionnaire nommé `tests` et les arguments doivent être placés dans une liste.
+
 ```python
 tests = {
     "aire_carre": [1, 3, 6, 10, 15],  # Liste des arguments à tester pour la fonction aire_carre

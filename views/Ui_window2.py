@@ -44,7 +44,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.CardWidget)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.TableView = TableWidget(self.CardWidget)
-        self.TableView.setShowGrid(True)
         self.TableView.setSortingEnabled(True)
         self.TableView.setObjectName("TableView")
         self.horizontalLayout.addWidget(self.TableView)

@@ -61,6 +61,8 @@ class StudentFileDownloader:
 
     def dl_every_student_file(self, assignment_link, copies_path, progress_signal=None) -> None:
         self.copies_path = copies_path
+        # create folder if it does not exist
+
         self.driver.get(assignment_link)
         time.sleep(0.5)
         self.dl_csv()
@@ -69,13 +71,13 @@ class StudentFileDownloader:
         logger.info(f"Found {len(names)} students")
         logger.debug(names)
         logger.info("Downloading files...")
-
+        if not os.path.exists(self.copies_path):
+            os.makedirs(self.copies_path)
         for name in names:
             if progress_signal:
                 progress_signal.emit(names.index(name))
             if self._is_file_already_downloaded(name):
                 logger.debug(f"Skipping {name}")
-
                 continue
             time.sleep(0.5)
 
@@ -123,9 +125,6 @@ class StudentFileDownloader:
         list_of_files = glob.glob(f"{self.dl_path}/*.py")
         latest_file = max(list_of_files, key=os.path.getctime)
 
-        # if folder does not exist, create it
-        if not os.path.exists(self.copies_path):
-            os.mkdir(self.copies_path)
         os.rename(latest_file, f"{self.copies_path}/{student_name}.py")
         logger.debug(f"Renamed {latest_file} to {student_name}.py")
 
