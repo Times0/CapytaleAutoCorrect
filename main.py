@@ -46,20 +46,35 @@ class DownloadWorker(QThread):
 class CorrectWorker(QThread):
     progress_signal = pyqtSignal(int)
 
-    def __init__(self, copies_paths, output_path, correction_file):
+    def __init__(self, copies_paths, output_path, correction_file, parent=None):
         super().__init__()
         self.output_path = output_path
         self.correction_file = correction_file
         self.copies_paths = copies_paths
+        self.linker = parent
 
     def run(self) -> None:
         correcter = EvilCorrecter(self.copies_paths, self.correction_file)
         correcter.correct_all(progress_signal=self.progress_signal)
-        correcter.generate_xlsx(self.output_path)
+        if correcter.generate_xlsx(self.output_path) != 0:
+            logger.error("Error while generating the xlsx file.")
+            print("Error while generating the xlsx file, close excel if it is open.")
+            return
         self.progress_signal.emit(100)
 
         # open the explorer on the output folder
-        os.startfile(os.path.join(cwd, "output"))
+        try:
+            os.startfile(os.path.join(cwd, "output"))
+        except Exception as e:
+            logger.error(e)
+            # error message box
+            InfoBar.error(
+                title='Error',
+                content=f"An error occurred while opening the output folder: {e}",
+                position=InfoBarPosition.BOTTOM_RIGHT,
+                parent=self.linker,
+                duration=5000
+            )
 
 
 class MainWindow(QMainWindow):
@@ -125,11 +140,11 @@ class MainWindow(QMainWindow):
         self.correct_worker = CorrectWorker(
             copies_paths=glob.glob(os.path.join(cwd, self.copies_path, "*.py")),
             output_path=f"output/corrected_{self.assignment_code}.xlsx",
-            correction_file=self.window3_ui.correction_path
+            correction_file=self.window3_ui.correction_path,
+            parent=self
         )
         self.correct_worker.start(priority=QThread.HighestPriority)
         self.correct_worker.progress_signal.connect(self.window3_ui.update_progress_bar)
-        self.correct_worker.finished.connect(self.end)
 
     def check_for_auth_then_download(self):
         if self.auth_worker.isFinished():
@@ -156,17 +171,7 @@ class MainWindow(QMainWindow):
             isClosable=True,
             position=InfoBarPosition.BOTTOM_RIGHT,
             duration=3000,
-            parent=self
-        )
-
-    def end(self):
-        InfoBar.success(
-            title='',
-            content="The correction is finished. You can find the output file in the output folder.",
-            isClosable=True,
-            position=InfoBarPosition.BOTTOM_RIGHT,
-            duration=3000,
-            parent=self
+            parent=self.parent()
         )
 
 

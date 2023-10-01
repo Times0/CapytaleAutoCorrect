@@ -128,7 +128,18 @@ class EvilCorrecter:
 
     def generate_xlsx(self, path):
         print("Generating xlsx")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         workbook = xlsxwriter.Workbook(path)
+        self._sheet1(workbook)
+        self._sheet2(workbook)
+
+        try:
+            workbook.close()
+            return 0
+        except Exception as e:
+            return -1
+
+    def _sheet1(self, workbook):
         worksheet = workbook.add_worksheet()
 
         # Create a format for cell coloring
@@ -165,7 +176,50 @@ class EvilCorrecter:
             # Add a separator (blank row) between students
             row += 1
 
-        workbook.close()
+    def _sheet2(self, workbook):
+        worksheet = workbook.add_worksheet()
+
+        # Create a format for cell coloring
+        pass_format = workbook.add_format({'bg_color': '#C6EFCE', 'bold': True})
+        fail_format = workbook.add_format({'bg_color': '#FFC7CE', 'bold': True})
+
+        # Start from the first cell. Rows and columns are zero-indexed.
+        row = 0
+        col = 0
+
+        # Write the headers for student names and function names
+        worksheet.write(row, col, "Student Name")
+        col += 1
+
+        function_names = list(self.detailed_results[list(self.detailed_results.keys())[0]].keys())
+        for function_name in function_names:
+            worksheet.write(row, col, function_name)
+            col += 1
+
+        # Iterate over the data and write it out row by row.
+        for student_name, functions in self.detailed_results.items():
+            row += 1
+            col = 0
+
+            # Write the student's name in the first column
+            worksheet.write(row, col, student_name)
+
+            for function_name, tests in functions.items():
+                points = 0
+                for test_name, result in tests.items():
+                    passed = result == Result.OK
+                    if passed:
+                        points += 1
+                points = int(points / len(tests.items()) * 10)
+                worksheet.write(row, col + 1, points)
+                col += 1
+
+            worksheet.write(0, col + 1, "Total")
+            # Add a column for total
+            worksheet.write(row, col + 1, f"=SUM(B{row + 1}:{xlsxwriter.utility.xl_col_to_name(col)}{row + 1})")
+
+            # Add conditional formatting to values in total with gradient min is 0 max is 10* number of functions
+            worksheet.conditional_format(1, col + 1, 100, col + 1, {'type': '3_color_scale'})
 
     def test_for_inputs(self, file, student_name):
         """Test if the files contains the keyword input and raise an error if it does"""
@@ -238,3 +292,4 @@ if __name__ == '__main__':
     correcter = EvilCorrecter(files_paths=copies, correction_path=correction_file)
 
     correcter.correct_all()
+    correcter.generate_xlsx("output/test.xlsx")
