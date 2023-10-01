@@ -82,7 +82,7 @@ class EvilCorrecter:
             except AttributeError:
                 logger.debug(f"Function {function_name} not found in {file}, skipping")
                 for test_name in self.expected_outputs[function_name]:
-                    self.detailed_results[student_name][function_name][test_name] = Result.INEXSISTANT
+                    self.detailed_results[student_name][function_name][test_name] = Result.INEXISTANT
                 continue
             except SyntaxError:
                 logger.debug(f"Syntax error in {file}, skipping")
@@ -206,7 +206,7 @@ class Result(Enum):
     WRONG = "Wrong output"
     ERROR = "Error"
     TIMEOUT = "Timeout"
-    INEXSISTANT = "Inexistant"
+    INEXISTANT = "Function not found"
     SYNTAX_ERROR = "Syntax error"
     INPUT_FOUND = "'Input' found in file"
 

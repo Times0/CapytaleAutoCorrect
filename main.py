@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO,
                     handlers=[logging.StreamHandler(), logging.FileHandler("logs.log")])
 
 logger = logging.getLogger(__name__)
-user = User(username="magali.andry-chevalerias", password="Ecedouced#42T")
+user = User(username=os.getenv("ENT_USERNAME"), password=os.getenv("ENT_PASSWORD"))
 
 cwd = os.path.dirname(os.path.realpath(__file__))
 
