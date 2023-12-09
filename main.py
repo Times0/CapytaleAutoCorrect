@@ -5,7 +5,7 @@ import sys
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
-from qfluentwidgets import InfoBar, InfoBarPosition
+from qfluentwidgets import InfoBar, InfoBarPosition, FluentIcon, PushButton
 
 from scripts.browser import StudentFileDownloader, User
 from scripts.tester import EvilCorrecter
@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
         self.copies_path = None
 
     def setui(self):
-        self.setWindowTitle("Capytale auto correc")
+        self.setWindowTitle("Capytale auto correction")
 
         # Central widget
         self.central_widget = QWidget()
@@ -103,6 +103,8 @@ class MainWindow(QMainWindow):
         self.window1 = QMainWindow()
         self.window1_ui = Window1Ui()
         self.window1_ui.setupUi(self.window1)  # Pass window1 widget
+        self.window1_ui.ToolButton_2.setIcon(FluentIcon.RIGHT_ARROW)
+        self.init_loading_logic()
         self.stacked_widget.addWidget(self.window1)  # Add window1 to the stacked widget
 
         # Window 2 setup
@@ -173,6 +175,12 @@ class MainWindow(QMainWindow):
             duration=3000,
             parent=self.parent()
         )
+
+    def init_loading_logic(self):
+        # add a Pushbutton for every directory in the copies folder
+        for directory in glob.glob(os.path.join(cwd, "copies", "*")):
+            if os.path.isdir(directory):
+                self.window1_ui.verticalLayout_4.addWidget(PushButton("test"))
 
 
 if __name__ == '__main__':

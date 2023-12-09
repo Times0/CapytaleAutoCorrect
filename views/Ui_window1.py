@@ -66,7 +66,7 @@ class Ui_MainWindow(object):
         self.ScrollArea.setSizePolicy(sizePolicy)
         self.ScrollArea.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.ScrollArea.setWidgetResizable(True)
-        self.ScrollArea.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
+        self.ScrollArea.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         self.ScrollArea.setObjectName("ScrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
         self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 375, 387))
@@ -154,5 +154,8 @@ class Ui_MainWindow(object):
         self.PushButton.setText(_translate("MainWindow", "Push button"))
         self.PushButton_2.setText(_translate("MainWindow", "Push button"))
         self.SubtitleLabel.setText(_translate("MainWindow", "...Ou entrer le lien de l\'activité"))
-        self.PlainTextEdit.setPlaceholderText(_translate("MainWindow", "https://capytale2.ac-paris.fr/web/assignments/1911196"))
+        self.PlainTextEdit.setPlaceholderText(
+            _translate("MainWindow", "https://capytale2.ac-paris.fr/web/assignments/1911196"))
+
+
 from qfluentwidgets import CardWidget, PlainTextEdit, PushButton, ScrollArea, SubtitleLabel, TitleLabel, ToolButton
