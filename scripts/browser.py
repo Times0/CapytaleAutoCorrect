@@ -27,7 +27,11 @@ class User:
 
 dotenv.load_dotenv()
 user = User(username=os.getenv("ENT_USERNAME"), password=os.getenv("ENT_PASSWORD"))
-print(user)
+if not user.username or not user.password:
+    raise ValueError("ENT_USERNAME or ENT_PASSWORD is not set in the .env file. Please create a .env file in the "
+                     "project's root directory and set the variables accordingly.")
+
+print(f"User is {user}")
 
 
 class StudentFileDownloader:

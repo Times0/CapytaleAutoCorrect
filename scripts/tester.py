@@ -10,6 +10,8 @@ from typing import Callable
 import multiprocess
 import xlsxwriter
 
+from config import TESTING_EFFICIENCY
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,8 +25,8 @@ class EvilCorrecter:
         logger.debug(f"Students names: {self.student_names}")
 
         self.correction_file: str = correction_path
-        self.model_functions: dict[str, Callable] = get_functions_from_file(self.correction_file)
-        self.funtions_names_to_test: list[str] = list(self.model_functions.keys())
+        self.model_functions: dict[str, Callable] = {}
+        self.funtions_names_to_test: list[str] = []
 
         self.test_values: dict[str, dict[str:tuple]] = {}  # {function_name: {test_name: test_values}}
         self.expected_outputs: dict[str, dict[str, any]] = {}  # {function_name: {test_name: expected_output}}
@@ -56,9 +58,12 @@ class EvilCorrecter:
             return
 
         for f_name in tests.keys():
+            self.model_functions[f_name] = load_function(self.correction_file, f_name)
             self.test_values[f_name] = {}
             for i, test in enumerate(tests[f_name]):
                 self.test_values[f_name][f"test {i}"] = test
+
+        self.funtions_names_to_test = list(tests.keys())
 
     def generate_expected_outputs(self):
         for function_name in self.funtions_names_to_test:
@@ -94,13 +99,19 @@ class EvilCorrecter:
 
     def correct_function(self, function: Callable, tests: dict[str, tuple], student_name) -> None:
         # logger.debug(f"Testing function {function.__name__}")
+
+        if TESTING_EFFICIENCY:
+            run = run_with_timeout
+        else:
+            run = run_without_timeout
+
         for test_name, test in tests.items():
             logger.debug(f"Testing {test_name} with {test}")
             try:
                 if isinstance(test, tuple):
-                    result = run_without_timeout(function, *test)
+                    result = run(function, *test)
                 else:
-                    result = run_without_timeout(function, test)
+                    result = run(function, test)
             except TimeoutError:
                 self.detailed_results[student_name][function.__name__][test_name] = Result.TIMEOUT
                 logger.info(f"Timeout while testing {function.__name__} with {test}, result -> TIMEOUT")
@@ -111,8 +122,13 @@ class EvilCorrecter:
                 self.detailed_results[student_name][function.__name__][test_name] = Result.ERROR
                 continue
 
-            if result == self.expected_outputs[function.__name__][test_name]:
+            # Verifying if the result is correct
+            if isinstance(result, float):
+                if abs(result - self.expected_outputs[function.__name__][test_name]) < 1e-6:
+                    self.detailed_results[student_name][function.__name__][test_name] = Result.OK
+            elif result == self.expected_outputs[function.__name__][test_name]:
                 self.detailed_results[student_name][function.__name__][test_name] = Result.OK
+            # Test failed with incorrect output
             else:
                 self.detailed_results[student_name][function.__name__][test_name] = Result.WRONG
                 logger.info(f"Error while testing {function.__name__} from {student_name} with {test}")
@@ -280,16 +296,3 @@ def get_functions_from_file(file: str) -> dict[str, Callable]:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return {name: function for name, function in module.__dict__.items() if callable(function)}
-
-
-if __name__ == '__main__':
-    logger.info("Starting tests")
-    copies_path = rf"../copies/1911196"
-    correction_file = os.path.join(os.getcwd(), "../correction_1.py")
-
-    copies = glob.glob(f"{copies_path}/*.py")
-
-    correcter = EvilCorrecter(files_paths=copies, correction_path=correction_file)
-
-    correcter.correct_all()
-    correcter.generate_xlsx("output/test.xlsx")

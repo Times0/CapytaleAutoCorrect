@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QVBoxLayo
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 from scripts.browser import StudentFileDownloader, User
-from scripts.tests_better import EvilCorrecter
+from scripts.tester import EvilCorrecter
 from views.Ui_window1 import Ui_MainWindow as Window1Ui
 from views.Ui_window2 import Ui_MainWindow as Window2Ui
 from views.Ui_window3 import Ui_MainWindow as Window3Ui

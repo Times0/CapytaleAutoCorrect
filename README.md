@@ -37,4 +37,10 @@ def somme(n):
 
 def aire_rectangle(longueur, largeur):
     return longueur * largeur
+
+
+# Cette fonction n'est pas testée car elle n'est pas dans le dictionnaire tests
+def f(x):
+    return 15 * x + 2
+
 ```
