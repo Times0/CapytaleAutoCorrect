@@ -1,16 +1,14 @@
-import glob
 import importlib.util
 import logging
 import os
-from enum import Enum, auto
+from enum import Enum
 from importlib.machinery import SourceFileLoader
-from pprint import pprint
 from typing import Callable
 
 import multiprocess
 import xlsxwriter
 
-from config import TESTING_EFFICIENCY
+from config import TESTING_WITH_TO
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +98,7 @@ class EvilCorrecter:
     def correct_function(self, function: Callable, tests: dict[str, tuple], student_name) -> None:
         # logger.debug(f"Testing function {function.__name__}")
 
-        if TESTING_EFFICIENCY:
+        if TESTING_WITH_TO:
             run = run_with_timeout
         else:
             run = run_without_timeout
@@ -194,11 +192,6 @@ class EvilCorrecter:
 
     def _sheet2(self, workbook):
         worksheet = workbook.add_worksheet()
-
-        # Create a format for cell coloring
-        pass_format = workbook.add_format({'bg_color': '#C6EFCE', 'bold': True})
-        fail_format = workbook.add_format({'bg_color': '#FFC7CE', 'bold': True})
-
         # Start from the first cell. Rows and columns are zero-indexed.
         row = 0
         col = 0

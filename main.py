@@ -85,6 +85,7 @@ class MainWindow(QMainWindow):
         self.window2_ui.PushButton.clicked.connect(lambda: self.show_screen(self.window3))
         self.start_auth_worker()
 
+        self.assignment_code = None
         self.copies_path = None
 
     def setui(self):
@@ -139,9 +140,10 @@ class MainWindow(QMainWindow):
         self.download_worker.progress_signal.connect(self.window2_ui.clicked)
 
     def start_correct_worker(self):
+        print(self.copies_path)
         self.correct_worker = CorrectWorker(
             copies_paths=glob.glob(os.path.join(cwd, self.copies_path, "*.py")),
-            output_path=f"output/corrected_{self.assignment_code}.xlsx",
+            output_path=os.path.join(cwd, "output", f"corrected_{self.assignment_code}.xlsx"),
             correction_file=self.window3_ui.correction_path,
             parent=self
         )
@@ -172,15 +174,21 @@ class MainWindow(QMainWindow):
             content="The authentication was successful.",
             isClosable=True,
             position=InfoBarPosition.BOTTOM_RIGHT,
-            duration=3000,
-            parent=self.parent()
+            duration=2000,
+            parent=self
         )
 
     def init_loading_logic(self):
-        # add a Pushbutton for every directory in the copies folder
         for directory in glob.glob(os.path.join(cwd, "copies", "*")):
             if os.path.isdir(directory):
-                self.window1_ui.verticalLayout_4.addWidget(PushButton("test"))
+                b = PushButton(directory.split("\\")[-1], self.window1_ui.scrollAreaWidgetContents)
+                b.clicked.connect(lambda _, path=directory: self.shortcut_to_correction(path))
+                self.window1_ui.scrollAreaWidgetContents.layout().addWidget(b)
+
+    def shortcut_to_correction(self, copiespath):
+        self.copies_path = copiespath
+        self.assignment_code = copiespath.split("\\")[-1]
+        self.show_screen(self.window3)
 
 
 if __name__ == '__main__':
