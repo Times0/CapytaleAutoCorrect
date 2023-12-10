@@ -116,15 +116,7 @@
                           <property name="frameShadow">
                            <enum>QFrame::Raised</enum>
                           </property>
-                          <layout class="QVBoxLayout" name="verticalLayout_9">
-                           <item>
-                            <widget class="PushButton" name="PushButton">
-                             <property name="text">
-                              <string>Push button</string>
-                             </property>
-                            </widget>
-                           </item>
-                          </layout>
+                          <layout class="QVBoxLayout" name="verticalLayout_9"/>
                          </widget>
                         </item>
                         <item>
@@ -284,11 +276,6 @@
   </widget>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>PushButton</class>
-   <extends>QPushButton</extends>
-   <header>qfluentwidgets</header>
-  </customwidget>
   <customwidget>
    <class>ToolButton</class>
    <extends>QToolButton</extends>
