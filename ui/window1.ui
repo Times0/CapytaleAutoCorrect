@@ -197,7 +197,7 @@
                   <item>
                    <widget class="SubtitleLabel" name="SubtitleLabel">
                     <property name="text">
-                     <string>...Ou entrer le lien de l'activité</string>
+                     <string>...Ou entrer le lien de la nouvelle activité</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignCenter</set>

@@ -105,11 +105,11 @@ class Ui_MainWindow(object):
                 return
 
         InfoBar.success(
-            title="The correction file is valid 🔥",
-            content="The selected file is valid, you can now start the test correction",
-            position=InfoBarPosition.BOTTOM,
+            title="La correction semble valide",
+            content="Vous pouvez lancer la correction",
+            position=InfoBarPosition.BOTTOM_RIGHT,
             parent=self.parent,
-            duration=5000
+            duration=2000
         )
         self.correction_path = filename
         self.correctNowButton.show()
