@@ -4,7 +4,7 @@ import os
 import sys
 
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget, QVBoxLayout, QWidget, QLabel, QHBoxLayout
 from qfluentwidgets import InfoBar, InfoBarPosition, FluentIcon, PushButton
 
 from scripts.browser import StudentFileDownloader, User
@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
 
         self.stacked_widget.setCurrentWidget(self.window1)
 
-        self.resize(800, 600)
+        self.resize(1000, 600)
 
     def start_auth_worker(self):
         self.auth_worker = AuthWorker()
@@ -181,9 +181,31 @@ class MainWindow(QMainWindow):
     def init_loading_logic(self):
         for directory in glob.glob(os.path.join(cwd, "copies", "*")):
             if os.path.isdir(directory):
-                b = PushButton(directory.split("\\")[-1], self.window1_ui.scrollAreaWidgetContents)
-                b.clicked.connect(lambda _, path=directory: self.shortcut_to_correction(path))
-                self.window1_ui.scrollAreaWidgetContents.layout().addWidget(b)
+                # Create a QPushButton for the directory
+                button = PushButton(directory.split("\\")[-1], self.window1_ui.buttonsFrame)
+                button.clicked.connect(lambda _, path=directory: self.shortcut_to_correction(path))
+
+                # Create a QLabel to display the number of files
+                file_count = len(os.listdir(directory))
+                label = QLabel(f"Files: {file_count}", self.window1_ui.buttonsFrame)
+
+                # Add both the button and label to the layout
+                # Create a layout for the buttonsFrame
+                layout = QHBoxLayout()
+
+                # Add the button with a stretch factor of 2 (can be adjusted)
+                layout.addWidget(button, 2)
+
+                # Add the label with a stretch factor of 1 (can be adjusted)
+                layout.addWidget(label, 1)
+
+                # Create a QWidget to hold the layout
+                widget = QWidget(self.window1_ui.buttonsFrame)
+                widget.setLayout(layout)
+
+                # Add the widget to the buttonsFrame
+                self.window1_ui.buttonsFrame.layout().addWidget(widget)
+
 
     def shortcut_to_correction(self, copiespath):
         self.copies_path = copiespath
