@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
         self.auth_worker.finished.connect(self.show_dialog)
 
     def start_download_worker(self):
-        link = self.window1_ui.LineEdit.text()
+        link = self.window1_ui.PlainTextEdit.toPlainText()
         self.assignment_code = link.split("/")[-1]
         self.copies_path = os.path.join(cwd, "copies", self.assignment_code)
         self.download_worker = DownloadWorker(link, copies_path=self.copies_path)
